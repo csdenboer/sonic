@@ -3,14 +3,10 @@
 package internal
 
 import (
-	"fmt"
 	"os"
 	"syscall"
-	"time"
 	"unsafe"
 )
-
-var threshold = 1 * time.Millisecond
 
 type EventFd struct {
 	fd   int
@@ -45,16 +41,10 @@ func (e *EventFd) Write(x uint64) (int, error) {
 		panic("buffer is empty")
 	}
 
-	now := time.Now()
-	
 	r0, _, e0 := syscall.RawSyscall(syscall.SYS_WRITE, uintptr(e.fd), uintptr(_p0), uintptr(len(p)))
 	n := int(r0)
 	if e0 != 0 {
 		return n, e0
-	}
-
-	if time.Since(now) > threshold {
-		fmt.Println(fmt.Sprintf("reading took: %v", time.Since(now)))
 	}
 
 	return n, nil
@@ -68,16 +58,10 @@ func (e *EventFd) Read(b []byte) (int, error) {
 		panic("buffer is empty")
 	}
 
-	now := time.Now()
-
 	n0, _, e0 := syscall.RawSyscall(syscall.SYS_READ, uintptr(e.fd), uintptr(_p0), uintptr(len(b)))
 	n := int(n0)
 	if e0 != 0 {
 		return n, e0
-	}
-
-	if time.Since(now) > threshold {
-		fmt.Println(fmt.Sprintf("reading took: %v", time.Since(now)))
 	}
 
 	return n, nil
