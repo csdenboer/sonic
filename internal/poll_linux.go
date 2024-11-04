@@ -10,10 +10,13 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/csdenboer/sonic/sonicerrors"
 )
+
+var threshold = 1 * time.Millisecond
 
 type PollerEvent uint32
 
@@ -146,6 +149,8 @@ func (p *poller) Posted() int {
 }
 
 func (p *poller) Poll(timeoutMs int) (n int, err error) {
+	now := time.Now()
+
 	/* #nosec G103 -- the use of unsafe has been audited */
 	nn, _, errno := syscall.RawSyscall6(
 		syscall.SYS_EPOLL_WAIT,
@@ -172,6 +177,10 @@ func (p *poller) Poll(timeoutMs int) (n int, err error) {
 
 	if n == 0 && timeoutMs >= 0 {
 		return n, sonicerrors.ErrTimeout
+	}
+
+	if time.Since(now) > threshold {
+		fmt.Println("polling took: %v", time.Since(now))
 	}
 
 	for i := 0; i < int(n); i++ {
