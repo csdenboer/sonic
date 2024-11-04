@@ -208,6 +208,10 @@ func (p *poller) Poll(timeoutMs int) (n int, err error) {
 		}
 	}
 
+	if time.Since(now) > threshold {
+		fmt.Println(fmt.Sprintf("polling result took: %v", time.Since(now)))
+	}
+
 	return n, nil
 }
 
