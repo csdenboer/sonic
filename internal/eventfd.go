@@ -37,7 +37,17 @@ func (e *EventFd) Write(x uint64) (int, error) {
 }
 
 func (e *EventFd) Read(b []byte) (int, error) {
-	return syscall.Read(e.fd, b)
+	var _p0 unsafe.Pointer
+	if len(b) > 0 {
+		_p0 = unsafe.Pointer(&b[0])
+	} else {
+		panic("buffer is empty")
+	}
+
+	n0, _, err := syscall.RawSyscall(syscall.SYS_READ, uintptr(e.fd), uintptr(_p0), uintptr(len(b)))
+	n := int(n0)
+
+	return n, err
 }
 
 func (e *EventFd) Fd() int {

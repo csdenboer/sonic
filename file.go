@@ -5,6 +5,7 @@ import (
 	"os"
 	"sync/atomic"
 	"syscall"
+	"unsafe"
 
 	"github.com/csdenboer/sonic/internal"
 	"github.com/csdenboer/sonic/sonicerrors"
@@ -39,13 +40,19 @@ func Open(ioc *IO, path string, flags int, mode os.FileMode) (File, error) {
 }
 
 func (f *file) Read(b []byte) (int, error) {
-	n, err := syscall.Read(f.slot.Fd, b)
+	var _p0 unsafe.Pointer
+	if len(b) > 0 {
+		_p0 = unsafe.Pointer(&b[0])
+	} else {
+		panic("buffer is empty")
+	}
 
-	if err != nil {
+	n0, _, err := syscall.RawSyscall(syscall.SYS_READ, uintptr(f.slot.Fd), uintptr(_p0), uintptr(len(b)))
+	n := int(n0)
+	if err != 0 {
 		if err == syscall.EWOULDBLOCK || err == syscall.EAGAIN {
 			return 0, sonicerrors.ErrWouldBlock
 		}
-
 		return 0, err
 	}
 
