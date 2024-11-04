@@ -188,13 +188,13 @@ func (p *poller) Poll(timeoutMs int) (n int, err error) {
 
 		if events&slot.Events&PollerReadEvent == PollerReadEvent {
 			// TODO this errors should be reported
-			_ = p.Del(slot)
+			_ = p.DelRead(slot)
 			slot.Handlers[ReadEvent](nil)
 		}
 
 		if events&slot.Events&PollerWriteEvent == PollerWriteEvent {
 			// TODO this errors should be reported
-			_ = p.Del(slot)
+			_ = p.DelWrite(slot)
 			slot.Handlers[WriteEvent](nil)
 		}
 	}
