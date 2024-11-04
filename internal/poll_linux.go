@@ -216,11 +216,17 @@ func (p *poller) Poll(timeoutMs int) (n int, err error) {
 }
 
 func (p *poller) dispatch() {
+	now := time.Now()
+
 	for {
 		_, err := p.waker.Read(p.wakerBytes[:])
 		if err != nil {
 			break
 		}
+	}
+
+	if time.Since(now) > threshold {
+		fmt.Println(fmt.Sprintf("dispatch reading took: %v", time.Since(now)))
 	}
 
 	p.lck.Lock()
@@ -230,6 +236,10 @@ func (p *poller) dispatch() {
 	}
 	p.posts = p.posts[:0]
 	p.lck.Unlock()
+
+	if time.Since(now) > threshold {
+		fmt.Println(fmt.Sprintf("dispatch processing posts took: %v", time.Since(now)))
+	}
 }
 
 func (p *poller) SetRead(slot *Slot) error {
