@@ -1,9 +1,11 @@
 package sonic
 
 import (
+	"fmt"
 	"io"
 	"sync/atomic"
 	"syscall"
+	"time"
 
 	"github.com/csdenboer/sonic/internal"
 	"github.com/csdenboer/sonic/sonicerrors"
@@ -90,8 +92,14 @@ func (a *AsyncAdapter) AsyncReadAll(b []byte, cb AsyncCallback) {
 }
 
 func (a *AsyncAdapter) asyncReadNow(b []byte, readBytes int, readAll bool, cb AsyncCallback) {
+	now := time.Now()
+
 	n, err := a.rw.Read(b[readBytes:])
 	readBytes += n
+
+	if time.Since(now) > threshold {
+		fmt.Println(fmt.Sprintf("async read now's read took: %v", time.Since(now)))
+	}
 
 	if err == nil && !(readAll && readBytes != len(b)) {
 		cb(nil, readBytes)

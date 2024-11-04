@@ -11,6 +11,8 @@ import (
 	"github.com/csdenboer/sonic/sonicerrors"
 )
 
+var threshold = 1 * time.Millisecond
+
 // IO is the executor of all asynchronous operations and the way any object can schedule them. It runs fully in the
 // calling goroutine.
 //
@@ -198,7 +200,15 @@ func (ioc *IO) Poll() error {
 //
 // This will return immediately in case there is no event to process.
 func (ioc *IO) PollOne() (n int, err error) {
-	return ioc.poll(0)
+	now := time.Now()
+
+	n, err = ioc.poll(0)
+
+	if time.Since(now) > threshold {
+		fmt.Println(fmt.Sprintf("pollone took: %v", time.Since(now)))
+	}
+
+	return n, err
 }
 
 func (ioc *IO) poll(timeoutMs int) (int, error) {

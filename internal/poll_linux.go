@@ -10,10 +10,13 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/csdenboer/sonic/sonicerrors"
 )
+
+var threshold = 1 * time.Millisecond
 
 type PollerEvent uint32
 
@@ -146,8 +149,10 @@ func (p *poller) Posted() int {
 }
 
 func (p *poller) Poll(timeoutMs int) (n int, err error) {
+	now := time.Now()
+
 	/* #nosec G103 -- the use of unsafe has been audited */
-	nn, _, errno := syscall.Syscall6(
+	nn, _, errno := syscall.RawSyscall6(
 		syscall.SYS_EPOLL_WAIT,
 		uintptr(p.fd),
 		uintptr(unsafe.Pointer(&p.events[0])),
@@ -174,6 +179,10 @@ func (p *poller) Poll(timeoutMs int) (n int, err error) {
 		return n, sonicerrors.ErrTimeout
 	}
 
+	if time.Since(now) > threshold {
+		fmt.Println(fmt.Sprintf("polling took: %v", time.Since(now)))
+	}
+
 	for i := 0; i < int(n); i++ {
 		event := &p.events[i]
 
@@ -186,10 +195,18 @@ func (p *poller) Poll(timeoutMs int) (n int, err error) {
 			continue
 		}
 
+		if time.Since(now) > threshold {
+			fmt.Println(fmt.Sprintf("polling dispatch took: %v", time.Since(now)))
+		}
+
 		if events&slot.Events&PollerReadEvent == PollerReadEvent {
 			// TODO this errors should be reported
 			_ = p.DelRead(slot)
 			slot.Handlers[ReadEvent](nil)
+		}
+
+		if time.Since(now) > threshold {
+			fmt.Println(fmt.Sprintf("polling delread took: %v", time.Since(now)))
 		}
 
 		if events&slot.Events&PollerWriteEvent == PollerWriteEvent {
@@ -197,17 +214,31 @@ func (p *poller) Poll(timeoutMs int) (n int, err error) {
 			_ = p.DelWrite(slot)
 			slot.Handlers[WriteEvent](nil)
 		}
+
+		if time.Since(now) > threshold {
+			fmt.Println(fmt.Sprintf("polling delwrite took: %v", time.Since(now)))
+		}
+	}
+
+	if time.Since(now) > threshold {
+		fmt.Println(fmt.Sprintf("polling result took: %v", time.Since(now)))
 	}
 
 	return n, nil
 }
 
 func (p *poller) dispatch() {
+	now := time.Now()
+
 	for {
 		_, err := p.waker.Read(p.wakerBytes[:])
 		if err != nil {
 			break
 		}
+	}
+
+	if time.Since(now) > threshold {
+		fmt.Println(fmt.Sprintf("dispatch reading took: %v", time.Since(now)))
 	}
 
 	p.lck.Lock()
@@ -217,6 +248,10 @@ func (p *poller) dispatch() {
 	}
 	p.posts = p.posts[:0]
 	p.lck.Unlock()
+
+	if time.Since(now) > threshold {
+		fmt.Println(fmt.Sprintf("dispatch processing posts took: %v", time.Since(now)))
+	}
 }
 
 func (p *poller) SetRead(slot *Slot) error {
@@ -245,7 +280,7 @@ func (p *poller) setRW(fd int, slot *Slot, flag PollerEvent) error {
 
 func (p *poller) add(fd int, event Event) error {
 	/* #nosec G103 -- the use of unsafe has been audited */
-	_, _, errno := syscall.Syscall6(
+	_, _, errno := syscall.RawSyscall6(
 		syscall.SYS_EPOLL_CTL,
 		uintptr(p.fd),
 		uintptr(syscall.EPOLL_CTL_ADD),
@@ -261,7 +296,7 @@ func (p *poller) add(fd int, event Event) error {
 
 func (p *poller) modify(fd int, event Event) error {
 	/* #nosec G103 -- the use of unsafe has been audited */
-	_, _, errno := syscall.Syscall6(
+	_, _, errno := syscall.RawSyscall6(
 		syscall.SYS_EPOLL_CTL,
 		uintptr(p.fd),
 		uintptr(syscall.EPOLL_CTL_MOD),
@@ -311,7 +346,7 @@ func (p *poller) DelWrite(slot *Slot) error {
 }
 
 func (p *poller) del(fd int) error {
-	_, _, errno := syscall.Syscall6(
+	_, _, errno := syscall.RawSyscall6(
 		syscall.SYS_EPOLL_CTL,
 		uintptr(p.fd),
 		uintptr(syscall.EPOLL_CTL_DEL),
