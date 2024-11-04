@@ -224,7 +224,7 @@ func (p *poller) SetRead(slot *Slot) error {
 }
 
 func (p *poller) SetWrite(slot *Slot) error {
-	return p.setRW(slot.Fd, slot, PollerWriteEvent|PollerReadEvent)
+	return p.setRW(slot.Fd, slot, PollerWriteEvent)
 }
 
 func (p *poller) setRW(fd int, slot *Slot, flag PollerEvent) error {
