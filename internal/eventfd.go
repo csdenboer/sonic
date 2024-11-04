@@ -10,6 +10,8 @@ import (
 	"unsafe"
 )
 
+var threshold = 1 * time.Millisecond
+
 type EventFd struct {
 	fd   int
 	slot Slot
@@ -44,14 +46,16 @@ func (e *EventFd) Write(x uint64) (int, error) {
 	}
 
 	now := time.Now()
-
+	
 	r0, _, e0 := syscall.RawSyscall(syscall.SYS_WRITE, uintptr(e.fd), uintptr(_p0), uintptr(len(p)))
 	n := int(r0)
 	if e0 != 0 {
 		return n, e0
 	}
 
-	fmt.Println(fmt.Sprintf("reading took: %v", time.Since(now)))
+	if time.Since(now) > threshold {
+		fmt.Println(fmt.Sprintf("reading took: %v", time.Since(now)))
+	}
 
 	return n, nil
 }
@@ -72,7 +76,9 @@ func (e *EventFd) Read(b []byte) (int, error) {
 		return n, e0
 	}
 
-	fmt.Println(fmt.Sprintf("reading took: %v", time.Since(now)))
+	if time.Since(now) > threshold {
+		fmt.Println(fmt.Sprintf("reading took: %v", time.Since(now)))
+	}
 
 	return n, nil
 }
