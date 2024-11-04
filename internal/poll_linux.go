@@ -220,7 +220,7 @@ func (p *poller) dispatch() {
 }
 
 func (p *poller) SetRead(slot *Slot) error {
-	return p.setRW(slot.Fd, slot, PollerReadEvent)
+	return p.setRW(slot.Fd, slot, PollerReadEvent|PollerWriteEvent)
 }
 
 func (p *poller) SetWrite(slot *Slot) error {
