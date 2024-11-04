@@ -1,12 +1,13 @@
 package sonic
 
 import (
-	"github.com/csdenboer/sonic/internal"
-	"github.com/csdenboer/sonic/sonicerrors"
 	"io"
 	"os"
 	"sync/atomic"
 	"syscall"
+
+	"github.com/csdenboer/sonic/internal"
+	"github.com/csdenboer/sonic/sonicerrors"
 )
 
 var _ File = &file{}
