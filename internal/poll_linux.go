@@ -188,13 +188,13 @@ func (p *poller) Poll(timeoutMs int) (n int, err error) {
 
 		if events&slot.Events&PollerReadEvent == PollerReadEvent {
 			// TODO this errors should be reported
-			_ = p.DelRead(slot)
+			_ = p.Del(slot)
 			slot.Handlers[ReadEvent](nil)
 		}
 
 		if events&slot.Events&PollerWriteEvent == PollerWriteEvent {
 			// TODO this errors should be reported
-			_ = p.DelWrite(slot)
+			_ = p.Del(slot)
 			slot.Handlers[WriteEvent](nil)
 		}
 	}
@@ -220,11 +220,11 @@ func (p *poller) dispatch() {
 }
 
 func (p *poller) SetRead(slot *Slot) error {
-	return p.setRW(slot.Fd, slot, PollerReadEvent)
+	return p.setRW(slot.Fd, slot, PollerReadEvent|PollerWriteEvent)
 }
 
 func (p *poller) SetWrite(slot *Slot) error {
-	return p.setRW(slot.Fd, slot, PollerWriteEvent)
+	return p.setRW(slot.Fd, slot, PollerWriteEvent|PollerReadEvent)
 }
 
 func (p *poller) setRW(fd int, slot *Slot, flag PollerEvent) error {
