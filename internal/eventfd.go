@@ -32,8 +32,22 @@ func NewEventFd(nonBlocking bool) (*EventFd, error) {
 }
 
 func (e *EventFd) Write(x uint64) (int, error) {
-	/* #nosec G103 -- the use of unsafe has been audited */
-	return syscall.Write(e.fd, (*(*[8]byte)(unsafe.Pointer(&x)))[:])
+	p = (*(*[8]byte)(unsafe.Pointer(&x)))[:]
+
+	var _p0 unsafe.Pointer
+	if len(p) > 0 {
+		_p0 = unsafe.Pointer(&p[0])
+	} else {
+		panic("buffer is empty")
+	}
+
+	r0, _, e0 := syscall.RawSyscall(syscall.SYS_WRITE, uintptr(e.fd), uintptr(_p0), uintptr(len(p)))
+	n := int(r0)
+	if e0 != 0 {
+		return n, errnoErr(e0)
+	}
+
+	return n, nil
 }
 
 func (e *EventFd) Read(b []byte) (int, error) {
@@ -44,10 +58,13 @@ func (e *EventFd) Read(b []byte) (int, error) {
 		panic("buffer is empty")
 	}
 
-	n0, _, err := syscall.RawSyscall(syscall.SYS_READ, uintptr(e.fd), uintptr(_p0), uintptr(len(b)))
-	n := int(n0)
+	n0, _, e0 := syscall.RawSyscall(syscall.SYS_READ, uintptr(e.fd), uintptr(_p0), uintptr(len(b)))
+	n := int(r0)
+	if e0 != 0 {
+		return n, errnoErr(e0)
+	}
 
-	return n, err
+	return n, nil
 }
 
 func (e *EventFd) Fd() int {
@@ -60,4 +77,18 @@ func (e *EventFd) Slot() *Slot {
 
 func (e *EventFd) Close() error {
 	return syscall.Close(e.fd)
+}
+
+func errnoErr(e Errno) error {
+	switch e {
+	case 0:
+		return nil
+	case EAGAIN:
+		return errEAGAIN
+	case EINVAL:
+		return errEINVAL
+	case ENOENT:
+		return errENOENT
+	}
+	return e
 }
