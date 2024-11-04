@@ -195,16 +195,28 @@ func (p *poller) Poll(timeoutMs int) (n int, err error) {
 			continue
 		}
 
+		if time.Since(now) > threshold {
+			fmt.Println(fmt.Sprintf("polling dispatch took: %v", time.Since(now)))
+		}
+
 		if events&slot.Events&PollerReadEvent == PollerReadEvent {
 			// TODO this errors should be reported
 			_ = p.DelRead(slot)
 			slot.Handlers[ReadEvent](nil)
 		}
 
+		if time.Since(now) > threshold {
+			fmt.Println(fmt.Sprintf("polling delread took: %v", time.Since(now)))
+		}
+
 		if events&slot.Events&PollerWriteEvent == PollerWriteEvent {
 			// TODO this errors should be reported
 			_ = p.DelWrite(slot)
 			slot.Handlers[WriteEvent](nil)
+		}
+
+		if time.Since(now) > threshold {
+			fmt.Println(fmt.Sprintf("polling delwrite took: %v", time.Since(now)))
 		}
 	}
 
